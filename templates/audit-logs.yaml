@@ -14,12 +14,6 @@ transforms:
       - set_retention: { min: 60, max: 90 }
 
   - if:
-      - and:
-        - { field: message, contains: 'INFO  [org.keycloak.events]'}
-        - { field: message, contains: 'type=USER_INFO_REQUEST'}
-    then:
-
-  - if:
       - field: message
         contains: audit.k8s
     then:

@@ -5,8 +5,8 @@ name: openshift-audit
 transforms:
   - if:
       - not:
-        - field: message
-          contains: 'audit.k8s'
+          - field: message
+            contains: 'audit.k8s'
     then:
       - add:
           event.dataset: other
@@ -28,153 +28,253 @@ transforms:
       - grok:
           field: message
           patterns:
-            - '^docker:\{"container_id"=>%{QUOTEDSTRING:container.id}}#011kubernetes:\{"container_name"=>%{QUOTEDSTRING:container.name}, "namespace_name"=>%{QUOTEDSTRING:container.labels.namespace}, "pod_name"=>%{QUOTEDSTRING:container.labels.pod}.+#011message:{%{GREEDYDATA:auditlog}}}#011.+$'
+            - '^docker:\{"container_id"=>%{QUOTEDSTRING:container.id}}#011kubernetes:\{"container_name"=>%{QUOTEDSTRING:container.name}, "namespace_name"=>%{QUOTEDSTRING:container.labels.namespace}, "pod_name"=>%{QUOTEDSTRING:container.labels.pod}.+#011message:\{%{GREEDYDATA:auditlog}\}\}#011.+$'
+            - '^docker:\{"container_id"=>%{QUOTEDSTRING:container.id}}#011kubernetes:\{"container_name"=>%{QUOTEDSTRING:container.name}, "namespace_name"=>%{QUOTEDSTRING:container.labels.namespace}, "pod_name"=>%{QUOTEDSTRING:container.labels.pod}.+#011message:%{GREEDYDATA:message}\}#011.+$'
       - if:
-        - field: auditlog
-          contains: "@timestamp"
+          - { field: auditlog, contains: "@timestamp" }
         then:
           - grok:
               field: auditlog
               patterns:
                 - "[\\W\\D]?\"@timestamp\"=>[\"']*(?<@timestamp>[^\",']+)"
+      - if:
+          - { field: auditlog, contains: "loggerName\"=>" }
+        then:
           - grok:
               field: auditlog
               patterns:
                 - "[\\W\\D]?\"loggerName\"=>[\"']*(?<log.logger>[^\",']+)"
+      - if:
+          - { field: auditlog, contains: "level\"=>" }
+        then:
           - grok:
               field: auditlog
               patterns:
                 - "[\\W\\D]?\"level\"=>[\"']*(?<log.level>[^\",']+)"
+      - if:
+          - { field: auditlog, contains: "message\"=>" }
+        then:
           - grok:
               field: auditlog
               patterns:
                 - "[\\W\\D]?\"message\"=>[\"']*(?<labels.audit_message>[^\",']+)"
-
       - if:
-          - field: labels.audit_message
-            contains: "type="
+          -  {field: labels.audit_message, exists: }
         then:
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?type='*(?<labels.audit_type>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?realmId='*(?<labels.audit_realm_id>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?clientId='*(?<labels.audit_client_id>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?ipAddress='*(?<client.ip>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?userId='*(?<user.id>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?username='*(?<user.name>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?email='*(?<user.email>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?token_id='*(?<labels.audit_token_id>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?refresh_token_id='*(?<labels.audit_refresh_token_id>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?updated_refresh_token_id='*(?<labels.audit_updated_refresh_token_id>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?grant_type='*(?<labels.audit_grant_type>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?client_auth_method='*(?<labels.audit_client_auth_method>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?authSessionParentId='*(?<labels.audit_auth_session_parent_id>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?authSessionTabId='*(?<labels.audit_auth_session_tab_id>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?identity_provider='*(?<labels.audit_identity_provider>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?identity_provider_identity='*(?<labels.audit_identity_provider_identity>[^,']+)"
-          - grok:
-              field: labels.audit_message
-              patterns:
-                - "[\\W\\D]?redirect_uri='*(?<labels.audit_redirect_uri>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?consent='*(?<labels.audit_consent>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?code_id='*(?<labels.audit_code_id>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?refresh_token_type='*(?<labels.audit_refresh_token_type>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?scope='*(?<labels.audit_scope>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?auth_method='*(?<labels.audit_auth_method>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?auth_type='*(?<labels.audit_auth_type>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?signature_required='*(?<labels.audit_signature_required>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?response_type='*(?<labels.audit_response_type>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?response_mode='*(?<labels.audit_response_mode>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?error='*(?<labels.audit_error>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?operationType='*(?<labels.audit_operation_type>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?resourceType='*(?<labels.audit_resource_type>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?resourcePath='*(?<labels.audit_resource_path>[^,']+)"
-          - grok:
-                field: labels.audit_message
-                patterns:
-                  - "[\\W\\D]?register_method='*(?<labels.audit_register_method>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "type="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?type='*(?<labels.audit_type>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "realmId="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?realmId='*(?<labels.audit_realm_id>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "clientId="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?clientId='*(?<labels.audit_client_id>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "ipAddress="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?ipAddress='*(?<client.ip>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "userId="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?userId='*(?<user.id>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "username="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?username='*(?<user.name>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "email="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?email='*(?<user.email>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "token_id="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?token_id='*(?<labels.audit_token_id>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "refresh_token_id="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?refresh_token_id='*(?<labels.audit_refresh_token_id>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "updated_refresh_token_id="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?updated_refresh_token_id='*(?<labels.audit_updated_refresh_token_id>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "grant_type="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?grant_type='*(?<labels.audit_grant_type>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "client_auth_method="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?client_auth_method='*(?<labels.audit_client_auth_method>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "authSessionParentId="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?authSessionParentId='*(?<labels.audit_auth_session_parent_id>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "authSessionTabId="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?authSessionTabId='*(?<labels.audit_auth_session_tab_id>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "identity_provider="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?identity_provider='*(?<labels.audit_identity_provider>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "identity_provider_identity="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?identity_provider_identity='*(?<labels.audit_identity_provider_identity>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "redirect_uri="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?redirect_uri='*(?<labels.audit_redirect_uri>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "consent="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?consent='*(?<labels.audit_consent>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "code_id="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?code_id='*(?<labels.audit_code_id>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "refresh_token_type="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?refresh_token_type='*(?<labels.audit_refresh_token_type>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "scope="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?scope='*(?<labels.audit_scope>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "auth_type="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?auth_method='*(?<labels.audit_auth_method>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "auth_type="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?auth_type='*(?<labels.audit_auth_type>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "signature_required="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?signature_required='*(?<labels.audit_signature_required>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "response_type="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?response_type='*(?<labels.audit_response_type>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "response_mode="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?response_mode='*(?<labels.audit_response_mode>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "error="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?error='*(?<labels.audit_error>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "operationType="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?operationType='*(?<labels.audit_operation_type>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "resourceType="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?resourceType='*(?<labels.audit_resource_type>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "resourcePath="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?resourcePath='*(?<labels.audit_resource_path>[^,']+)"
+          - if:
+              - {field: labels.audit_message, contains: "register_method="}
+            then:
+              - grok:
+                  field: labels.audit_message
+                  patterns:
+                    - "[\\W\\D]?register_method='*(?<labels.audit_register_method>[^,']+)"

@@ -57,7 +57,7 @@ transforms:
           - grok:
               field: auditlog
               patterns:
-                - "[\\W\\D]?\"message\"=>[\"']*(?<labels.audit_message>[^\",']+)"
+                - "[\\W\\D]?\"message\"=>[\"']*(?<labels.audit_message>[^\"]+)"
       - if:
           -  {field: labels.audit_message, exists: }
         then:
